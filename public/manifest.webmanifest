@@ -1,0 +1,16 @@
+{
+  "name": "Kids Tracker",
+  "short_name": "Kids Tracker",
+  "description": "Catatan belajar anak: hafalan, pelajaran sekolah, dan kebiasaan harian.",
+  "lang": "id",
+  "start_url": "/today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbfdfb",
+  "theme_color": "#2f8462",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

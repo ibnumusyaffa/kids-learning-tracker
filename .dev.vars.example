@@ -1,0 +1,6 @@
+# Salin ke .dev.vars untuk dev lokal. Production: `wrangler secret put <NAMA>`.
+BETTER_AUTH_SECRET=ganti-dengan-string-acak-32-karakter
+BETTER_AUTH_URL=http://localhost:3000
+# Opsional. Kosongkan kalau login Google belum dipakai.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

@@ -1,0 +1,32 @@
+/**
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "kids-tracker",
+	"compatibility_date": "2026-11-19",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "@tanstack/react-start/server-entry",
+	"observability": { "enabled": true },
+	"upload_source_maps": true,
+
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "kids-tracker",
+			// Dibuat 23 Nov 2026: `wrangler d1 create kids-tracker --location apac`.
+			"database_id": "91d341ae-2dd7-430b-862c-48d780220cbd",
+			"migrations_dir": "drizzle"
+		}
+	],
+
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "kids-tracker-uploads"
+		}
+	]
+
+	// Secrets (isi lewat .dev.vars untuk lokal, `wrangler secret put` untuk production):
+	// BETTER_AUTH_SECRET, BETTER_AUTH_URL, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+}

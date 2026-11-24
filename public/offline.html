@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline · Kids Tracker</title>
+    <style>
+      :root { color-scheme: light dark; --bg: #fbfdfb; --fg: #1d2b25; --muted: #5d6f67; --accent: #2f8462; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #121a16; --fg: #eef5f1; --muted: #a9bbb2; --accent: #5dbb90; } }
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
+             font-family: system-ui, sans-serif; text-align: center; padding: 16px; }
+      p { color: var(--muted); }
+      button { margin-top: 8px; padding: 10px 18px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; font-size: 15px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icon-192.png" alt="" width="72" height="72" style="border-radius: 16px" />
+      <h1>Sedang offline</h1>
+      <p>Kids Tracker butuh koneksi internet untuk memuat dan menyimpan catatan.</p>
+      <button onclick="location.reload()">Coba lagi</button>
+    </main>
+  </body>
+</html>
