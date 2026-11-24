@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { and, asc, eq, isNull } from 'drizzle-orm'
 import { z } from 'zod'
+import { todayIn } from '@/lib/dates'
 import { getDb, schema } from '@/db'
 import { getChildForFamily } from './access.server'
 import { familyMiddleware } from './family'
@@ -12,7 +13,6 @@ export const listChildren = createServerFn({ method: 'GET' })
       .select({
         id: schema.children.id,
         name: schema.children.name,
-        grade: schema.children.grade,
         avatar: schema.children.avatar,
         birthDate: schema.children.birthDate,
       })
@@ -28,7 +28,6 @@ export const listChildren = createServerFn({ method: 'GET' })
 
 const createChildInput = z.object({
   name: z.string().trim().min(1).max(60),
-  grade: z.string().trim().max(30).optional(),
   avatar: z.string().max(16).optional(),
   birthDate: z.iso.date().optional(),
 })
@@ -37,12 +36,12 @@ export const createChild = createServerFn({ method: 'POST' })
   .middleware([familyMiddleware])
   .validator(createChildInput)
   .handler(async ({ data, context }) => {
+    if (data.birthDate && data.birthDate > todayIn(context.timezone)) throw new Error('FUTURE_BIRTH_DATE')
     const [child] = await getDb()
       .insert(schema.children)
       .values({
         familyId: context.familyId,
         name: data.name,
-        grade: data.grade || null,
         avatar: data.avatar || null,
         birthDate: data.birthDate ?? null,
       })
@@ -55,11 +54,11 @@ export const updateChild = createServerFn({ method: 'POST' })
   .validator(createChildInput.extend({ childId: z.string() }))
   .handler(async ({ data, context }) => {
     const child = await getChildForFamily(data.childId, context.familyId)
+    if (data.birthDate && data.birthDate > todayIn(context.timezone)) throw new Error('FUTURE_BIRTH_DATE')
     await getDb()
       .update(schema.children)
       .set({
         name: data.name,
-        grade: data.grade || null,
         avatar: data.avatar || null,
         birthDate: data.birthDate ?? null,
       })

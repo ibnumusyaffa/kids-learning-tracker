@@ -65,7 +65,6 @@ export const children = sqliteTable(
       .references(() => organization.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     birthDate: localDate('birth_date'),
-    grade: text('grade'),
     avatar: text('avatar'),
     archivedAt: archivedAt(),
     createdAt: createdAt(),

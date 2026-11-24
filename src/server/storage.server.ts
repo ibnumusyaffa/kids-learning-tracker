@@ -25,10 +25,13 @@ export function getBucket() {
 
 /** Hapus banyak objek; kegagalan dicatat tapi tidak menggagalkan request. */
 export async function deleteObjects(keys: string[]) {
-  if (keys.length === 0) return
-  try {
-    await getBucket().delete(keys)
-  } catch (err) {
-    console.error('Gagal menghapus file R2', keys, err)
+  // R2 menerima maksimal 1000 key per panggilan delete.
+  for (let i = 0; i < keys.length; i += 1000) {
+    const chunk = keys.slice(i, i + 1000)
+    try {
+      await getBucket().delete(chunk)
+    } catch (err) {
+      console.error('Gagal menghapus file R2', chunk, err)
+    }
   }
 }

@@ -62,6 +62,12 @@ export const setUnitMastery = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data, context }) => {
     const { unit } = await getUnitForFamily(data.unitId, context.familyId)
+    const [child] = await getDb()
+      .select({ id: schema.units.id })
+      .from(schema.units)
+      .where(and(eq(schema.units.parentId, unit.id), isNull(schema.units.archivedAt)))
+      .limit(1)
+    if (child) throw new Error('PARENT_UNIT')
     await getDb()
       .update(schema.units)
       .set({ mastery: data.mastery })
@@ -82,41 +88,53 @@ export const setUnitCompleted = createServerFn({ method: 'POST' })
     return { id: unit.id }
   })
 
-/** Tukar urutan dengan materi tetangga (parent yang sama). */
-export const moveUnit = createServerFn({ method: 'POST' })
+/**
+ * Simpan urutan baru satu kelompok saudara (topik utama, atau sub-topik dalam
+ * satu induk) hasil drag & drop. `orderedIds` harus berisi persis semua
+ * saudara yang aktif; kalau tidak (tampilan sudah basi), ditolak.
+ */
+export const reorderUnits = createServerFn({ method: 'POST' })
   .middleware([familyMiddleware])
-  .validator(z.object({ unitId: z.string(), direction: z.enum(['up', 'down']) }))
+  .validator(
+    z.object({
+      subjectId: z.string(),
+      parentId: z.string().nullable(),
+      orderedIds: z.array(z.string()).min(1).max(1000),
+    }),
+  )
   .handler(async ({ data, context }) => {
-    const { unit } = await getUnitForFamily(data.unitId, context.familyId)
+    const { subject } = await getSubjectForFamily(data.subjectId, context.familyId)
     const db = getDb()
     const siblings = await db
       .select({ id: schema.units.id, sortOrder: schema.units.sortOrder })
       .from(schema.units)
       .where(
         and(
-          eq(schema.units.subjectId, unit.subjectId),
-          unit.parentId
-            ? eq(schema.units.parentId, unit.parentId)
-            : isNull(schema.units.parentId),
+          eq(schema.units.subjectId, subject.id),
+          data.parentId ? eq(schema.units.parentId, data.parentId) : isNull(schema.units.parentId),
           isNull(schema.units.archivedAt),
         ),
       )
-      .orderBy(schema.units.sortOrder, schema.units.createdAt)
 
-    const i = siblings.findIndex((s) => s.id === unit.id)
-    const j = data.direction === 'up' ? i - 1 : i + 1
-    if (i < 0 || j < 0 || j >= siblings.length) return { id: unit.id }
+    const current = new Set(siblings.map((s) => s.id))
+    const wanted = new Set(data.orderedIds)
+    if (
+      wanted.size !== data.orderedIds.length ||
+      wanted.size !== current.size ||
+      ![...wanted].every((id) => current.has(id))
+    ) {
+      throw new Error('ORDER_MISMATCH')
+    }
 
-    const a = siblings[i]
-    const b = siblings[j]
-    // Kalau sort_order sama (data lama), pakai indeks supaya tetap bergeser.
-    const [orderA, orderB] =
-      a.sortOrder === b.sortOrder ? [j, i] : [b.sortOrder, a.sortOrder]
-    await db.batch([
-      db.update(schema.units).set({ sortOrder: orderA }).where(eq(schema.units.id, a.id)),
-      db.update(schema.units).set({ sortOrder: orderB }).where(eq(schema.units.id, b.id)),
-    ])
-    return { id: unit.id }
+    const orderOf = new Map(siblings.map((s) => [s.id, s.sortOrder]))
+    const updates = data.orderedIds
+      .map((id, i) => ({ id, sortOrder: i + 1 }))
+      .filter((u) => orderOf.get(u.id) !== u.sortOrder)
+      .map((u) =>
+        db.update(schema.units).set({ sortOrder: u.sortOrder }).where(eq(schema.units.id, u.id)),
+      )
+    if (updates.length) await db.batch(updates as [(typeof updates)[number], ...typeof updates])
+    return { updated: updates.length }
   })
 
 /** Arsip materi beserta sub-topiknya. Log lama tetap tersimpan. */

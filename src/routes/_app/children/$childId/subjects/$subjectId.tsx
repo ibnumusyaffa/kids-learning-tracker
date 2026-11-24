@@ -1,7 +1,5 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import {
-  ArrowDown,
-  ArrowUp,
   Check,
   ChevronLeft,
   MoreVertical,
@@ -12,13 +10,15 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { ChildAvatar } from '@/components/child-avatar'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { SortableUnitList } from '@/components/sortable-unit-list'
+import { TypeConfirmDialog } from '@/components/type-confirm-dialog'
 import { PaceLine } from '@/components/pace-line'
 import { LogFormDialog } from '@/components/log-form-dialog'
 import { LogHistory } from '@/components/log-history'
-import { MasteryDots, MasteryPicker } from '@/components/mastery'
+import { MasteryPicker } from '@/components/mastery'
 import { SubjectSettingsDialog } from '@/components/subject-form-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -37,16 +37,16 @@ import { Progress } from '@/components/ui/progress'
 import { UnitFormDialog } from '@/components/unit-form-dialog'
 import type { MasteryLevel } from '@/db/enums'
 import { STRUCTURE_META } from '@/lib/subject-meta'
-import { cn } from '@/lib/utils'
 import { listLogs } from '@/server/logs'
 import {
+  RESET_CONFIRM_TEXT,
   archiveSubject,
   getSubjectDetail,
   getSubjectFormOptions,
+  resetSubjectProgress,
 } from '@/server/subjects'
 import {
   archiveUnit,
-  moveUnit,
   setUnitCompleted,
   setUnitMastery,
 } from '@/server/units'
@@ -69,12 +69,14 @@ type Data = Awaited<ReturnType<typeof getSubjectDetail>>
 type Unit = Data['units'][number]
 
 function SubjectPage() {
-  const { child, subject, units, hasLogs, lastLog, pace, categories, logs } = Route.useLoaderData()
+  const { child, subject, units, hasLogs, logCount, lastLog, pace, categories, logs } =
+    Route.useLoaderData()
   const { viewer } = Route.useRouteContext()
   const router = useRouter()
   const [logOpen, setLogOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [addParentId, setAddParentId] = useState<string | null>(null)
   const [selected, setSelected] = useState<Unit | null>(null)
@@ -109,7 +111,7 @@ function SubjectPage() {
           className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground"
         >
           <ChevronLeft className="size-4" />
-          {child.avatar} {child.name}
+          <ChildAvatar avatar={child.avatar} size="xs" /> {child.name}
         </Link>
         <div className="flex items-start gap-3">
           <div className="flex-1">
@@ -134,6 +136,12 @@ function SubjectPage() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
+                onSelect={() => setResetOpen(true)}
+              >
+                Reset progres
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
                 onSelect={() => setArchiveOpen(true)}
               >
                 Arsipkan
@@ -153,7 +161,12 @@ function SubjectPage() {
           <Overview subject={subject} units={units} pace={pace} />
 
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Materi ({units.length})</h2>
+            <div>
+              <h2 className="font-semibold">Materi ({units.length})</h2>
+              {units.length > 1 && (
+                <p className="text-xs text-muted-foreground">Geser ⠿ untuk mengubah urutan</p>
+              )}
+            </div>
             <Button size="sm" onClick={() => openAdd()}>
               <Plus /> Tambah
             </Button>
@@ -164,17 +177,12 @@ function SubjectPage() {
               Belum ada materi.
             </p>
           ) : (
-            <ul className="divide-y rounded-lg border">
-              {(childrenOf.get(null) ?? []).map((u) => (
-                <UnitRow
-                  key={u.id}
-                  unit={u}
-                  unitLabel={subject.unitLabel}
-                  childrenOf={childrenOf}
-                  onSelect={setSelected}
-                />
-              ))}
-            </ul>
+            <SortableUnitList
+              subjectId={subject.id}
+              units={units}
+              unitLabel={subject.unitLabel}
+              onSelect={(u) => setSelected(units.find((x) => x.id === u.id) ?? null)}
+            />
           )}
         </>
       )}
@@ -213,6 +221,7 @@ function SubjectPage() {
               canHaveChildren={
                 subject.structure === 'checklist' && !selected.parentId
               }
+              isParent={(childrenOf.get(selected.id) ?? []).length > 0}
               onClose={() => setSelected(null)}
               onEdit={() => {
                 setEditing(selected)
@@ -263,6 +272,33 @@ function SubjectPage() {
           openEnded: subject.openEnded,
           suggestOrder: subject.suggestOrder,
           categoryId: subject.categoryId,
+        }}
+      />
+      <TypeConfirmDialog
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+        title={`Reset progres ${subject.name}?`}
+        expected={RESET_CONFIRM_TEXT}
+        confirmLabel="Reset progres"
+        description={
+          <>
+            <p>
+              <strong>{logCount} catatan</strong> beserta fotonya akan dihapus permanen, dan level
+              serta tanda selesai semua materi dikosongkan. Tindakan ini tidak bisa dibatalkan.
+            </p>
+            <p>Daftar materi ({units.length}) tetap ada.</p>
+          </>
+        }
+        onConfirm={async () => {
+          try {
+            const res = await resetSubjectProgress({
+              data: { subjectId: subject.id, confirm: RESET_CONFIRM_TEXT },
+            })
+            toast.success(`Progres direset · ${res.deletedLogs} catatan dihapus`)
+            await router.invalidate()
+          } catch {
+            toast.error('Gagal mereset progres')
+          }
         }}
       />
       <ConfirmDialog
@@ -335,81 +371,12 @@ function Overview({
   )
 }
 
-function UnitRow({
-  unit,
-  unitLabel,
-  childrenOf,
-  onSelect,
-  depth = 0,
-}: {
-  unit: Unit
-  unitLabel: string | null
-  childrenOf: Map<string | null, Unit[]>
-  onSelect: (u: Unit) => void
-  depth?: number
-}) {
-  const kids = childrenOf.get(unit.id) ?? []
-  const p = unit.progress
-
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={() => onSelect(unit)}
-        className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-accent"
-        style={{ paddingLeft: `${0.75 + depth * 1.25}rem` }}
-      >
-        <div className="min-w-0 flex-1">
-          <p className={cn('truncate', kids.length > 0 && 'font-medium')}>
-            {unit.label}
-            {unit.meaning && (
-              <span className="text-muted-foreground"> · {unit.meaning}</span>
-            )}
-          </p>
-          {p && (
-            <div className="mt-1.5 flex items-center gap-2">
-              <Progress value={p.percent} className="h-1.5 flex-1" />
-              <span className="w-20 text-right text-xs text-muted-foreground">
-                {p.covered}/{p.size} {unitLabel ?? ''}
-              </span>
-            </div>
-          )}
-        </div>
-        {p ? (
-          p.done ? (
-            <Badge>
-              <Check /> Selesai
-            </Badge>
-          ) : p.covered > 0 ? (
-            <Badge variant="secondary">Sedang</Badge>
-          ) : null
-        ) : (
-          kids.length === 0 && <MasteryDots level={unit.mastery} />
-        )}
-      </button>
-      {kids.length > 0 && (
-        <ul className="divide-y border-t">
-          {kids.map((k) => (
-            <UnitRow
-              key={k.id}
-              unit={k}
-              unitLabel={unitLabel}
-              childrenOf={childrenOf}
-              onSelect={onSelect}
-              depth={depth + 1}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
-  )
-}
-
 function UnitActionsDialog({
   unit,
   structure,
   unitLabel,
   canHaveChildren,
+  isParent,
   onClose,
   onEdit,
   onAddChild,
@@ -418,6 +385,8 @@ function UnitActionsDialog({
   structure: 'range' | 'checklist'
   unitLabel: string | null
   canHaveChildren: boolean
+  /** Topik induk: level diisi di sub-topiknya, bukan di sini. */
+  isParent: boolean
   onClose: () => void
   onEdit: () => void
   onAddChild: () => void
@@ -458,7 +427,12 @@ function UnitActionsDialog({
             )}
           </DialogHeader>
 
-          {structure === 'checklist' && (
+          {structure === 'checklist' && isParent && (
+            <p className="text-sm text-muted-foreground">
+              Topik induk. Level dan catatan diisi di sub-topiknya.
+            </p>
+          )}
+          {structure === 'checklist' && !isParent && (
             <div className="space-y-1.5">
               <p className="text-sm font-medium">Level</p>
               <MasteryPicker
@@ -493,37 +467,15 @@ function UnitActionsDialog({
             </Button>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className={canHaveChildren ? 'grid grid-cols-2 gap-2' : 'grid'}>
             <Button variant="outline" onClick={onEdit} disabled={pending}>
               <Pencil /> Edit
             </Button>
-            {canHaveChildren ? (
+            {canHaveChildren && (
               <Button variant="outline" onClick={onAddChild} disabled={pending}>
                 <Plus /> Sub-topik
               </Button>
-            ) : (
-              <span />
             )}
-            <Button
-              variant="outline"
-              disabled={pending}
-              onClick={() =>
-                act(() => moveUnit({ data: { unitId: unit.id, direction: 'up' } }))
-              }
-            >
-              <ArrowUp /> Naik
-            </Button>
-            <Button
-              variant="outline"
-              disabled={pending}
-              onClick={() =>
-                act(() =>
-                  moveUnit({ data: { unitId: unit.id, direction: 'down' } }),
-                )
-              }
-            >
-              <ArrowDown /> Turun
-            </Button>
           </div>
           <Button
             variant="ghost"

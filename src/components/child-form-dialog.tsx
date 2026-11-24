@@ -1,6 +1,7 @@
 import { useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { AVATARS, ChildAvatar } from '@/components/child-avatar'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -10,14 +11,13 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { formatAge } from '@/lib/dates'
+import { cn } from '@/lib/utils'
 import { createChild, updateChild } from '@/server/children'
-
-const AVATARS = ['🦋', '🦁', '🐳', '🦊', '🐼', '🐣', '🦄', '🐢']
 
 type ChildValues = {
   id: string
   name: string
-  grade: string | null
   avatar: string | null
   birthDate: string | null
 }
@@ -26,25 +26,25 @@ export function ChildFormDialog({
   open,
   onOpenChange,
   child,
+  today,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** Kosong = tambah anak baru. */
   child?: ChildValues
+  /** Tanggal hari ini (zona waktu keluarga) untuk pratinjau umur. */
+  today: string
 }) {
   const router = useRouter()
   const [avatar, setAvatar] = useState(child?.avatar ?? AVATARS[0])
+  const [name, setName] = useState(child?.name ?? '')
+  const [birthDate, setBirthDate] = useState(child?.birthDate ?? '')
   const [pending, setPending] = useState(false)
+  const age = formatAge(birthDate || null, today)
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const form = new FormData(e.currentTarget)
-    const values = {
-      name: String(form.get('name')),
-      grade: String(form.get('grade') ?? ''),
-      birthDate: String(form.get('birthDate') ?? '') || undefined,
-      avatar,
-    }
+    const values = { name, birthDate: birthDate || undefined, avatar }
     setPending(true)
     try {
       if (child) {
@@ -69,52 +69,60 @@ export function ChildFormDialog({
         <DialogHeader>
           <DialogTitle>{child ? 'Edit profil anak' : 'Tambah anak'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="space-y-3">
+        <form onSubmit={onSubmit} className="space-y-4">
+          {/* Pratinjau */}
+          <div className="flex flex-col items-center gap-2 py-1">
+            <ChildAvatar avatar={avatar} size="lg" />
+            <div className="text-center">
+              <p className="font-medium">{name.trim() || 'Nama anak'}</p>
+              <p className="text-sm text-muted-foreground">{age ?? 'Umur belum diisi'}</p>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label>Avatar</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-6 gap-2">
               {AVATARS.map((a) => (
                 <button
                   key={a}
                   type="button"
                   onClick={() => setAvatar(a)}
                   aria-pressed={a === avatar}
-                  className={`rounded-md border p-1.5 text-2xl ${a === avatar ? 'border-primary bg-accent' : ''}`}
+                  aria-label={`Pilih avatar ${a}`}
+                  className={cn(
+                    'flex justify-center rounded-full p-0.5 ring-offset-2 ring-offset-background transition',
+                    a === avatar ? 'ring-2 ring-primary' : 'opacity-70 hover:opacity-100',
+                  )}
                 >
-                  {a}
+                  <ChildAvatar avatar={a} size="sm" />
                 </button>
               ))}
             </div>
           </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="child-name">Nama</Label>
             <Input
               id="child-name"
-              name="name"
               required
-              defaultValue={child?.name}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="off"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="child-grade">Kelas</Label>
-              <Input
-                id="child-grade"
-                name="grade"
-                placeholder="SD 2"
-                defaultValue={child?.grade ?? ''}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="child-birth">Tanggal lahir</Label>
-              <Input
-                id="child-birth"
-                name="birthDate"
-                type="date"
-                defaultValue={child?.birthDate ?? ''}
-              />
-            </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="child-birth">Tanggal lahir</Label>
+            <Input
+              id="child-birth"
+              type="date"
+              max={today}
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Untuk menampilkan umur.</p>
           </div>
+
           <Button type="submit" className="w-full" disabled={pending}>
             Simpan
           </Button>

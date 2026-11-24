@@ -25,7 +25,9 @@ import {
   subjectHasLogs,
 } from './access.server'
 import { familyMiddleware } from './family'
+import { runBatch } from './logs.server'
 import { loadActiveUnits, loadRangeState } from './progress.server'
+import { deleteObjects } from './storage.server'
 
 // ---------------------------------------------------------------------------
 // Opsi form
@@ -160,7 +162,6 @@ export const getChildDetail = createServerFn({ method: 'GET' })
       child: {
         id: child.id,
         name: child.name,
-        grade: child.grade,
         avatar: child.avatar,
         birthDate: child.birthDate,
       },
@@ -311,7 +312,11 @@ export const getSubjectDetail = createServerFn({ method: 'GET' })
         ? await loadRangeState([subject], units, todayIn(context.timezone))
         : null
     const progress = range?.progress ?? new Map()
-    const hasLogs = await subjectHasLogs(subject.id)
+    const [{ logCount }] = await getDb()
+      .select({ logCount: count() })
+      .from(schema.logs)
+      .where(eq(schema.logs.subjectId, subject.id))
+    const hasLogs = logCount > 0
     // Isian default form catat: durasi & mood dari catatan terakhir.
     const [lastLog] = await getDb()
       .select({ durationMin: schema.logs.durationMin, mood: schema.logs.mood })
@@ -334,6 +339,7 @@ export const getSubjectDetail = createServerFn({ method: 'GET' })
         presetId: subject.presetId,
       },
       hasLogs,
+      logCount,
       lastLog: lastLog ?? null,
       /** Kecepatan & perkiraan selesai (khusus range). */
       pace: range?.pace.get(subject.id) ?? null,
@@ -390,6 +396,43 @@ export const updateSubject = createServerFn({ method: 'POST' })
       })
       .where(eq(schema.subjects.id, subject.id))
     return { id: subject.id }
+  })
+
+/** Teks yang harus diketik untuk reset progres (dicek juga di server). */
+export const RESET_CONFIRM_TEXT = 'confirm'
+
+/**
+ * Reset progres satu pelajaran: hapus semua catatan + foto, kosongkan level
+ * dan tanda selesai materi, kembali ke putaran 1. Daftar materi tetap ada.
+ */
+export const resetSubjectProgress = createServerFn({ method: 'POST' })
+  .middleware([familyMiddleware])
+  .validator(z.object({ subjectId: z.string(), confirm: z.literal(RESET_CONFIRM_TEXT) }))
+  .handler(async ({ data, context }) => {
+    const { subject } = await getSubjectForFamily(data.subjectId, context.familyId)
+    const db = getDb()
+
+    const files = await db
+      .select({ key: schema.attachments.r2Key })
+      .from(schema.attachments)
+      .innerJoin(schema.logs, eq(schema.attachments.logId, schema.logs.id))
+      .where(eq(schema.logs.subjectId, subject.id))
+    const [{ logs }] = await db
+      .select({ logs: count() })
+      .from(schema.logs)
+      .where(eq(schema.logs.subjectId, subject.id))
+
+    // log_items & attachments ikut terhapus lewat FK cascade.
+    await runBatch([
+      db.delete(schema.logs).where(eq(schema.logs.subjectId, subject.id)),
+      db
+        .update(schema.units)
+        .set({ mastery: null, completedAt: null })
+        .where(eq(schema.units.subjectId, subject.id)),
+      db.update(schema.subjects).set({ currentCycle: 1 }).where(eq(schema.subjects.id, subject.id)),
+    ])
+    await deleteObjects(files.map((f) => f.key))
+    return { deletedLogs: logs, deletedFiles: files.length }
   })
 
 export const archiveSubject = createServerFn({ method: 'POST' })

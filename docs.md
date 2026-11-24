@@ -250,7 +250,6 @@ CREATE TABLE children (
   family_id    TEXT NOT NULL REFERENCES organization(id),
   name         TEXT NOT NULL,
   birth_date   TEXT,                -- 'YYYY-MM-DD'
-  grade        TEXT,                -- 'SD 2', 'TK B'
   avatar       TEXT,
   archived_at  INTEGER,
   created_at   INTEGER NOT NULL
@@ -483,11 +482,11 @@ Saran besok: Al-Ma'un ayat 5-7
 
 ```
 ANAK
-+--------+-------+
-| Nama   | Kelas |
-+--------+-------+
-| Aisyah | SD 2  |
-+--------+-------+
++--------+------------+-----------------+
+| Nama   | Lahir      | Umur (tampilan) |
++--------+------------+-----------------+
+| Aisyah | 2018-03-14 | 8 tahun 8 bulan |
++--------+------------+-----------------+
 
 PELAJARAN
 +---------------+-----------+------------+
@@ -538,7 +537,8 @@ HASIL (dihitung otomatis, tidak diisi)
 +------------------+----------------------------------------------+-------------+
 | Kapan            | Kegiatan                                     | Lama        |
 +------------------+----------------------------------------------+-------------+
-| Sekali di awal   | tambah anak, pilih pelajaran (preset)        | 10-15 menit |
+| Sekali di awal   | tambah anak (nama, avatar, tgl lahir),       | 10-15 menit |
+|                  | pilih pelajaran (preset)                     |             |
 | Setiap hari      | centang / isi log di layar "Hari Ini"        | 1-3 menit   |
 | Kadang-kadang    | tambah kosakata / materi baru                | saat ada    |
 | Mingguan/bulanan | lihat statistik & perkiraan selesai          | 5 menit     |
@@ -593,6 +593,7 @@ Tap item → form kecil yang sudah terisi sebagian → simpan. Default: materi &
 7. Untuk `range`, detail ayat/halaman di log **opsional**. Kosong berarti seluruh materi. Surah pendek cukup dicatat per surah; surah panjang bisa dicatat per ayat.
 8. Materi `range` boleh dikerjakan **tidak berurutan**. Progres dihitung per materi dari ayat/halaman unik, dan ringkasan menghitung jumlah materi yang selesai.
 9. Semua data hanya bisa diakses oleh anggota keluarga yang sama.
+10. **Reset progres** per pelajaran menghapus permanen semua catatan & fotonya serta mengosongkan level/tanda selesai materi (daftar materi tetap). Wajib mengetik `confirm`; server menolak teks lain.
 
 ## 9. Ruang lingkup
 

@@ -2,6 +2,7 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { BarChart3, ChevronRight, MoreVertical, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { ChildAvatar } from '@/components/child-avatar'
 import { ChildFormDialog } from '@/components/child-form-dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PaceLine } from '@/components/pace-line'
@@ -15,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Progress } from '@/components/ui/progress'
+import { formatAge, todayIn } from '@/lib/dates'
 import { STRUCTURE_META } from '@/lib/subject-meta'
 import { archiveChild } from '@/server/children'
 import {
@@ -36,6 +38,8 @@ export const Route = createFileRoute('/_app/children/$childId/')({
 
 function ChildPage() {
   const { child, subjects, options } = Route.useLoaderData()
+  const { viewer } = Route.useRouteContext()
+  const today = todayIn(viewer.family.timezone)
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [archiving, setArchiving] = useState(false)
@@ -62,12 +66,12 @@ function ChildPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <span className="text-4xl">{child.avatar ?? '🙂'}</span>
-        <div className="flex-1">
-          <h1 className="text-xl font-semibold">{child.name}</h1>
-          {child.grade && (
-            <p className="text-sm text-muted-foreground">{child.grade}</p>
-          )}
+        <ChildAvatar avatar={child.avatar} size="lg" />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-semibold">{child.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            {formatAge(child.birthDate, today) ?? 'Umur belum diisi'}
+          </p>
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link to="/children/$childId/stats" params={{ childId: child.id }}>
@@ -136,7 +140,7 @@ function ChildPage() {
         ))
       )}
 
-      <ChildFormDialog open={editing} onOpenChange={setEditing} child={child} />
+      <ChildFormDialog open={editing} onOpenChange={setEditing} child={child} today={today} />
       <AddSubjectDialog
         open={adding}
         onOpenChange={setAdding}

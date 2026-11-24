@@ -75,7 +75,7 @@ export function LogHistory({
 
   return (
     <div className="space-y-2">
-      <ul className="divide-y rounded-lg border">
+      <ul className="divide-y overflow-hidden rounded-lg border">
         {logs.map((log) => (
           <li key={log.id} className="space-y-1.5 p-3">
             <div className="flex items-start gap-2">

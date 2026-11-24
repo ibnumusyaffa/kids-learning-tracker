@@ -36,7 +36,7 @@ export type TodayReview = {
 }
 
 export type TodayChild = {
-  child: { id: string; name: string; avatar: string | null }
+  child: { id: string; name: string; avatar: string | null; birthDate: string | null }
   /** Untuk tautan "tambah pelajaran" saat kosong. */
   subjects: { id: string; name: string }[]
   habits: TodayHabit[]
@@ -48,7 +48,12 @@ export type TodayChild = {
 export async function buildToday(familyId: string, today: LocalDate): Promise<TodayChild[]> {
   const db = getDb()
   const children = await db
-    .select({ id: schema.children.id, name: schema.children.name, avatar: schema.children.avatar })
+    .select({
+      id: schema.children.id,
+      name: schema.children.name,
+      avatar: schema.children.avatar,
+      birthDate: schema.children.birthDate,
+    })
     .from(schema.children)
     .where(and(eq(schema.children.familyId, familyId), isNull(schema.children.archivedAt)))
     .orderBy(asc(schema.children.createdAt))
@@ -98,7 +103,10 @@ export async function buildToday(familyId: string, today: LocalDate): Promise<To
     const suggestions: (TodaySuggestion | TodayReview)[] = []
     for (const s of mine) {
       if (s.structure === 'none') continue
-      const own = units.filter((u) => u.subjectId === s.id)
+      const ownAll = units.filter((u) => u.subjectId === s.id)
+      // Topik induk (punya sub-topik) tidak dicatat langsung, jadi tidak disarankan.
+      const parentIds = new Set(ownAll.map((u) => u.parentId).filter(Boolean))
+      const own = ownAll.filter((u) => !parentIds.has(u.id))
 
       // Materi yang sedang disarankan untuk dilanjutkan tidak ikut "perlu diulang".
       let continuing: string | null = null

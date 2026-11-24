@@ -21,7 +21,9 @@ import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -225,14 +227,28 @@ export function LogFormDialog({
   const [pending, setPending] = useState(false)
 
   const unitById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units])
-  const unitOptions = useMemo(() => {
-    const label = (u: LogFormUnit) => {
-      const parent = u.parentId ? unitById.get(u.parentId) : null
-      return parent ? `${parent.label} › ${u.label}` : u.label
+  // Hanya materi paling bawah (tanpa sub-topik) yang bisa dicatat; topik
+  // induk tampil sebagai judul grup.
+  const unitGroups = useMemo(() => {
+    const kids = new Map<string | null, LogFormUnit[]>()
+    for (const u of units) {
+      const key = u.parentId && unitById.has(u.parentId) ? u.parentId : null
+      kids.set(key, [...(kids.get(key) ?? []), u])
     }
-    return [...units]
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((u) => ({ id: u.id, label: label(u), unit: u }))
+    for (const list of kids.values()) list.sort((a, b) => a.sortOrder - b.sortOrder)
+
+    type Option = { id: string; label: string; unit: LogFormUnit }
+    const leaves = (id: string, prefix: string): Option[] =>
+      (kids.get(id) ?? []).flatMap((u) => {
+        const label = prefix ? `${prefix} › ${u.label}` : u.label
+        return kids.get(u.id)?.length ? leaves(u.id, label) : [{ id: u.id, label, unit: u }]
+      })
+
+    return (kids.get(null) ?? []).map((root) =>
+      kids.get(root.id)?.length
+        ? { kind: 'group' as const, id: root.id, label: root.label, options: leaves(root.id, '') }
+        : { kind: 'item' as const, id: root.id, label: root.label, options: [{ id: root.id, label: root.label, unit: root }] },
+    )
   }, [units, unitById])
 
   const isRange = subject.structure === 'range'
@@ -377,12 +393,23 @@ export function LogFormDialog({
                       <SelectValue placeholder="Pilih materi" />
                     </SelectTrigger>
                     <SelectContent>
-                      {unitOptions.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.label}
-                          {o.unit.progress?.done ? ' ✓' : ''}
-                        </SelectItem>
-                      ))}
+                      {unitGroups.map((g) =>
+                        g.kind === 'group' ? (
+                          <SelectGroup key={g.id}>
+                            <SelectLabel>{g.label}</SelectLabel>
+                            {g.options.map((o) => (
+                              <SelectItem key={o.id} value={o.id} className="pl-5">
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ) : (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.label}
+                            {g.options[0].unit.progress?.done ? ' ✓' : ''}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 ) : (

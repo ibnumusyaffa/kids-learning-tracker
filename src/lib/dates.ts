@@ -65,3 +65,23 @@ export function formatMonthYear(date: LocalDate): string {
   const [y, m] = date.split('-').map(Number)
   return format(new Date(y, m - 1, 1), 'MMM yyyy', { locale: localeId })
 }
+
+/** Umur dalam tahun + bulan pada tanggal `today` (keduanya tanggal lokal). */
+export function ageOf(birthDate: LocalDate, today: LocalDate): { years: number; months: number } | null {
+  if (!isLocalDate(birthDate) || birthDate > today) return null
+  const [by, bm, bd] = birthDate.split('-').map(Number)
+  const [ty, tm, td] = today.split('-').map(Number)
+  let months = (ty - by) * 12 + (tm - bm)
+  if (td < bd) months -= 1
+  return { years: Math.floor(months / 12), months: months % 12 }
+}
+
+/** '8 tahun 3 bulan', '8 tahun', '11 bulan', 'baru lahir'. `short` → hanya tahun (atau bulan kalau < 1 tahun). */
+export function formatAge(birthDate: LocalDate | null, today: LocalDate, short = false): string | null {
+  if (!birthDate) return null
+  const age = ageOf(birthDate, today)
+  if (!age) return null
+  if (age.years === 0) return age.months === 0 ? 'baru lahir' : `${age.months} bulan`
+  if (short || age.months === 0) return `${age.years} tahun`
+  return `${age.years} tahun ${age.months} bulan`
+}

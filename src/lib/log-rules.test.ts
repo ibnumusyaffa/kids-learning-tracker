@@ -63,6 +63,15 @@ describe('normalizeLogItems', () => {
     ).toBe('DUPLICATE_UNIT#1')
   })
 
+  it('menolak topik induk (punya sub-topik)', () => {
+    const tree = new Map([
+      ['kali', { size: null, isParent: true }],
+      ['kali4', { size: null }],
+    ])
+    expect(code(() => normalizeLogItems(checklist, tree, [{ unitId: 'kali' }]))).toBe('PARENT_UNIT#0')
+    expect(normalizeLogItems(checklist, tree, [{ unitId: 'kali4', masteryAfter: 'kenal' }])).toHaveLength(1)
+  })
+
   it('none: tanpa materi', () => {
     expect(normalizeLogItems({ structure: 'none', openEnded: false }, units, [])).toEqual([])
     expect(

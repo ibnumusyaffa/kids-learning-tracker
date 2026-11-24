@@ -7,11 +7,12 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { Check, RotateCcw, Sparkles } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
+import { ChildAvatar } from '@/components/child-avatar'
 import { type LaunchRequest, SubjectLogLauncher } from '@/components/subject-log-launcher'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { formatLocalDate } from '@/lib/dates'
+import { formatAge, formatLocalDate } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { createLog } from '@/server/logs'
 import { type TodayReview, type TodaySuggestion, getToday } from '@/server/today'
@@ -69,9 +70,14 @@ function TodayPage() {
           <CardHeader className="gap-2">
             <div className="flex items-center gap-2">
               <CardTitle className="flex flex-1 items-center gap-2">
-                <span className="text-2xl">{c.child.avatar ?? '🙂'}</span>
-                <Link to="/children/$childId" params={{ childId: c.child.id }}>
-                  {c.child.name}
+                <ChildAvatar avatar={c.child.avatar} size="sm" />
+                <Link to="/children/$childId" params={{ childId: c.child.id }} className="min-w-0">
+                  <span className="block truncate">{c.child.name}</span>
+                  {c.child.birthDate && (
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {formatAge(c.child.birthDate, today, true)}
+                    </span>
+                  )}
                 </Link>
               </CardTitle>
               {c.total > 0 && (

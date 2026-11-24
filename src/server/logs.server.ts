@@ -48,10 +48,13 @@ export async function prepareItems(
 ) {
   const db = getDb()
   const unitRows = await db
-    .select({ id: schema.units.id, size: schema.units.size })
+    .select({ id: schema.units.id, size: schema.units.size, parentId: schema.units.parentId })
     .from(schema.units)
     .where(and(eq(schema.units.subjectId, subject.id), isNull(schema.units.archivedAt)))
-  const units = new Map(unitRows.map((u) => [u.id, { size: u.size }]))
+  const parents = new Set(unitRows.map((u) => u.parentId).filter(Boolean))
+  const units = new Map(
+    unitRows.map((u) => [u.id, { size: u.size, isParent: parents.has(u.id) }]),
+  )
 
   const normalized = normalizeLogItems(subject, units, items)
 

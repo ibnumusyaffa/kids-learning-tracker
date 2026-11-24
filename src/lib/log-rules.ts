@@ -50,7 +50,8 @@ const isSet = (v: number | null | undefined): v is number =>
 
 export function normalizeLogItems(
   subject: { structure: Structure; openEnded: boolean },
-  units: Map<string, { size: number | null }>,
+  /** `isParent`: materi punya sub-topik → tidak bisa dicatat langsung. */
+  units: Map<string, { size: number | null; isParent?: boolean }>,
   items: LogItemInput[],
 ): NormalizedLogItem[] {
   if (subject.structure === 'none') {
@@ -73,6 +74,7 @@ export function normalizeLogItems(
     if (item.unitId) {
       const found = units.get(item.unitId)
       if (!found) throw new LogRuleError('UNIT_NOT_FOUND', i)
+      if (found.isParent) throw new LogRuleError('PARENT_UNIT', i)
       // Range boleh menyentuh materi yang sama 2x (mis. ayat 1-5 & 20-25).
       if (subject.structure === 'checklist' && seen.has(item.unitId)) {
         throw new LogRuleError('DUPLICATE_UNIT', i)
@@ -136,6 +138,7 @@ export const LOG_RULE_MESSAGES: Record<string, string> = {
   TOO_MANY_ITEMS: `Maksimal ${MAX_LOG_ITEMS} materi per catatan.`,
   UNIT_REQUIRED: 'Pilih materi.',
   UNIT_NOT_FOUND: 'Materi tidak ditemukan.',
+  PARENT_UNIT: 'Pilih sub-topiknya, bukan topik induk.',
   DUPLICATE_UNIT: 'Topik yang sama dipilih dua kali.',
   NOT_OPEN_ENDED: 'Pelajaran ini tidak menerima materi baru dari catatan.',
   LABEL_REQUIRED: 'Nama materi baru wajib diisi.',

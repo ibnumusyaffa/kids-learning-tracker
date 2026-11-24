@@ -5,6 +5,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ChevronLeft } from 'lucide-react'
 import { ActivityHeatmap, BarList, UnitMap } from '@/components/charts'
+import { ChildAvatar } from '@/components/child-avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MASTERY_LEVELS } from '@/db/enums'
 import { MASTERY_META } from '@/lib/subject-meta'
@@ -28,7 +29,7 @@ function StatsPage() {
           className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground"
         >
           <ChevronLeft className="size-4" />
-          {s.child.avatar} {s.child.name}
+          <ChildAvatar avatar={s.child.avatar} size="xs" /> {s.child.name}
         </Link>
         <h1 className="text-xl font-semibold">Statistik</h1>
       </div>

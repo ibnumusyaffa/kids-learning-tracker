@@ -89,8 +89,8 @@ insert('categories', { id: CAT.kebiasaan, family_id: FAMILY, name: 'Kebiasaan', 
 
 const AISYAH = 'dev_child_aisyah'
 const UMAR = 'dev_child_umar'
-insert('children', { id: AISYAH, family_id: FAMILY, name: 'Aisyah', birth_date: '2018-03-14', grade: 'SD 2', avatar: '🦋', created_at: created })
-insert('children', { id: UMAR, family_id: FAMILY, name: 'Umar', birth_date: '2021-07-02', grade: 'TK B', avatar: '🦁', created_at: created + 1 })
+insert('children', { id: AISYAH, family_id: FAMILY, name: 'Aisyah', birth_date: '2018-03-14', avatar: '🦋', created_at: created })
+insert('children', { id: UMAR, family_id: FAMILY, name: 'Umar', birth_date: '2021-07-02', avatar: '🦁', created_at: created + 1 })
 
 // ---------------------------------------------------------------------------
 // Pelajaran & materi

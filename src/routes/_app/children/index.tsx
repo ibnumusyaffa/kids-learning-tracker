@@ -1,7 +1,9 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ChevronRight, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { ChildAvatar } from '@/components/child-avatar'
 import { ChildFormDialog } from '@/components/child-form-dialog'
+import { formatAge, todayIn } from '@/lib/dates'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { listChildren } from '@/server/children'
@@ -13,6 +15,8 @@ export const Route = createFileRoute('/_app/children/')({
 
 function ChildrenPage() {
   const children = Route.useLoaderData()
+  const { viewer } = Route.useRouteContext()
+  const today = todayIn(viewer.family.timezone)
   const [adding, setAdding] = useState(false)
 
   return (
@@ -38,14 +42,12 @@ function ChildrenPage() {
             >
               <Card className="transition-colors hover:bg-accent">
                 <CardContent className="flex items-center gap-3">
-                  <span className="text-3xl">{child.avatar ?? '🙂'}</span>
+                  <ChildAvatar avatar={child.avatar} size="md" />
                   <div className="flex-1">
                     <p className="font-medium">{child.name}</p>
-                    {child.grade && (
-                      <p className="text-sm text-muted-foreground">
-                        {child.grade}
-                      </p>
-                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {formatAge(child.birthDate, today) ?? 'Umur belum diisi'}
+                    </p>
                   </div>
                   <ChevronRight className="size-4 text-muted-foreground" />
                 </CardContent>
@@ -55,7 +57,7 @@ function ChildrenPage() {
         </div>
       )}
 
-      <ChildFormDialog open={adding} onOpenChange={setAdding} />
+      <ChildFormDialog open={adding} onOpenChange={setAdding} today={today} />
     </div>
   )
 }

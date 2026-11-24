@@ -108,6 +108,9 @@ Rencana kerja berdasarkan [docs.md](./docs.md). Urutan milestone = urutan penger
 - [x] Deploy hapus Todo ke production (24 Nov 2026)
 - [x] Hapus fitur Target (`targets`, `target_units`, form & kartu target, target di statistik) — migrasi `0004_drop_targets`; diganti baris otomatis "±N ayat/minggu → perkiraan selesai ~bulan" untuk pelajaran range (`src/lib/progress/pace.ts` + test)
 - [x] Deploy hapus Target ke production (24 Nov 2026)
+- [x] Reset progres per pelajaran (menu ⋮ di halaman pelajaran): hapus semua catatan + foto R2, kosongkan level & tanda selesai, putaran kembali 1; daftar materi tetap. Konfirmasi wajib mengetik `confirm` (dicek juga di server)
+- [x] Deploy reset progres ke production (24 Nov 2026)
+- [x] Fix: topik induk (punya sub-topik) tidak bisa dipilih di form catat (jadi judul grup), ditolak di server (`PARENT_UNIT`), tanpa pemilih level, dan tidak ikut "perlu diulang" — deploy 24 Nov 2026
 
 ## Fase 2
 
@@ -127,7 +130,12 @@ Rencana kerja berdasarkan [docs.md](./docs.md). Urutan milestone = urutan penger
 
 - [ ] Test UI di browser (form & dialog M0–M2 baru dites lewat HTTP ke server function + render SSR; logika form log, layar Hari Ini, form target/nilai, dan grafik belum diklik/dilihat di browser)
 - [ ] Pindahkan smoke test HTTP (server function) ke repo sebagai `scripts/smoke` atau test integrasi
-- [ ] Urutkan materi dengan drag & drop (sekarang tombol naik/turun)
+- [x] Urutkan materi dengan drag & drop (@dnd-kit, pegangan ⠿, hanya antar-saudara; server `reorderUnits` menolak susunan basi/campur) — tombol naik/turun dihapus
+- [x] Deploy drag & drop ke production (24 Nov 2026)
+- [x] Fix drag & drop: topik induk bisa digeser (deteksi tujuan hanya antar-saudara, overlay satu baris, gerak vertikal), pegangan 40×48 rata tengah, sub-topik berlatar beda, pengumuman pembaca layar bahasa Indonesia — dicek di browser (iPhone 12 Pro)
+- [x] Deploy fix drag & drop (24 Nov 2026)
+- [x] Profil anak: kelas dihapus (kolom `children.grade`, migrasi `0005_drop_child_grade`), avatar lingkaran berwarna (`ChildAvatar`), umur otomatis dari tanggal lahir (`formatAge` + test), tanggal lahir masa depan ditolak
+- [x] Deploy profil anak (production: 1 isian kelas akan terhapus)
 - [ ] Hapus anak/pelajaran permanen beserta foto R2 (sekarang hanya arsip)
 - [ ] Tes integrasi server function dengan D1 lokal (vitest + `@cloudflare/vitest-pool-workers`)
 - [ ] Bundle `family.server` ~1.1 MB (server); cek apakah bisa diperkecil
